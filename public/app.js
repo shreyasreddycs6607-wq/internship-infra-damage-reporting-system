@@ -764,7 +764,7 @@ async function inquiryDetailView(id) {
       q.allowed.length ? h('div', { class: 'row' }, q.allowed.map((to) => h('button', { class: 'btn ' + (['DECLINED', 'CANCELLED'].includes(to) ? 'danger' : 'secondary'), onclick: move(to) },
         { ACCEPTED: 'Accept', DECLINED: 'Decline', COMPLETED: 'Mark completed', CANCELLED: 'Cancel request' }[to]))) : null),
     h('div', { class: 'card' }, h('h2', {}, 'Conversation'), h('ol', { class: 'thread' }, q.messages.map((m) => h('li', { class: m.mine ? 'mine' : null }, h('div', {}, m.body), h('small', {}, `${m.mine ? 'You' : m.sender} · ${fmt(m.created_at)}`))))),
-    q.review ? h('p', { class: 'next' }, `Your rating: ${stars(q.review.rating)}${q.review.comment ? ' – ' + q.review.comment : ''}`) : null,
+    q.review ? h('p', { class: 'next' }, `${q.you_are === 'customer' ? 'Your rating' : 'Customer rating'}: ${stars(q.review.rating)}${q.review.comment ? ' – ' + q.review.comment : ''}`) : null,
     reviewForm,
     closed ? h('p', { class: 'hint' }, 'This conversation is closed.') : h('form', { class: 'card', onsubmit: act(btn, err, async () => { await api('POST', `/api/inquiries/${id}/messages`, { body: msg.value }); inquiryDetailView(id); }) },
       field('im', 'Reply', msg), err, btn));

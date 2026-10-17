@@ -1,6 +1,6 @@
 # Public Infrastructure Damage Reporting System
 
-**Live demo:** https://internship-infra-damage-reporting-system.onrender.com/  ·  **Status and requirement coverage:** [PROGRESS.md](PROGRESS.md)  ·  **Deployment guide:** [DEPLOY.md](DEPLOY.md)
+**Live demo:** https://internship-infra-damage-reporting-system.onrender.com/  ·  **Detailed project report:** [PROJECT_REPORT.md](PROJECT_REPORT.md)  ·  **Status and requirement coverage:** [PROGRESS.md](PROGRESS.md)  ·  **Deployment guide:** [DEPLOY.md](DEPLOY.md)
 
 Two parts in one web app, as specified in the project description:
 
