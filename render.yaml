@@ -1,0 +1,32 @@
+# Render Blueprint: Render reads this file when you choose New > Blueprint and pick this repository.
+# Full walkthrough: DEPLOY.md. Optional settings (email, SMS, maps) are added in the dashboard afterwards.
+services:
+  - type: web
+    name: civic-repair-desk
+    runtime: node
+    # A paid instance is required: persistent disks are not available on the free plan, and without a disk the
+    # database and uploaded photos would be erased on every restart or deploy.
+    plan: starter
+    region: singapore          # closest to India; options: oregon, ohio, virginia, frankfurt, singapore
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true           # redeploy on every push to the connected branch
+    numInstances: 1            # SQLite file + in-memory rate limiter: run exactly one copy
+    disk:
+      name: data
+      mountPath: /var/data     # database, uploads and backups live here and survive restarts/deploys
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION      # node:sqlite needs Node 22.13 or newer
+        value: "24"
+      - key: NODE_ENV
+        value: production      # Secure cookies + HSTS
+      - key: TRUST_PROXY       # Render puts one proxy in front of the app
+        value: "1"
+      - key: DB
+        value: /var/data/data.db
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: BACKUP_DIR        # daily snapshot of the database, newest 7 kept (same disk)
+        value: /var/data/backups

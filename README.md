@@ -12,7 +12,7 @@ Two parts in one web app, as specified in the project description:
 
 One Node process serves the JSON API and the web app.
 
-* **Stack:** Node ≥ 22.5 (built-in `node:sqlite`), Express 4, Multer, Leaflet 1.9.4 (served locally). Plain
+* **Stack:** Node ≥ 22.13 (built-in `node:sqlite`), Express 4, Multer, Leaflet 1.9.4 (served locally). Plain
   JavaScript, no build step. Runtime dependencies: `express`, `multer`, `leaflet`.
 * **Status of this build:** see [PROGRESS.md](PROGRESS.md) for what is done, verified, and still open.
 
@@ -47,7 +47,8 @@ The app reads the process environment only; it does not load `.env` files. See [
 | `DB` | `./data.db` | SQLite file |
 | `UPLOAD_DIR` | `./uploads` | Photo storage. Not web-served; delivered only via the authorised `/api/images/:id`. |
 | `MAX_UPLOAD_MB` | 5 | Per-image limit |
-| `TRUST_PROXY` | 0 | Set `1` behind one reverse proxy so rate limits see client IPs |
+| `TRUST_PROXY` | 0 | Number of reverse proxies in front of the app (Render: `1`) so rate limits see client IPs |
+| `BACKUP_DIR`, `BACKUP_KEEP` | – / 7 | Daily database snapshot folder and how many to keep |
 | `MAP_TILE_URL`, `MAP_ATTRIBUTION` | OpenStreetMap | Raster tile source for the map |
 | `APP_URL` | – | Public address (e.g. `https://repairs.example.org`); used for links in emails/texts. **Required when SMTP is configured** (the app refuses to start without it) |
 | `SMTP_HOST`, `SMTP_FROM` (+ `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`) | – | Enables **email** notifications |
@@ -208,18 +209,16 @@ Keep backups off the server and test a restore.
 
 ## Deployment
 
-1. Node ≥ 22.5, HTTPS reverse proxy (nginx/Caddy) in front; set `NODE_ENV=production`, `TRUST_PROXY=1`.
-2. `DB` and `UPLOAD_DIR` on a **persistent volume** (a container's ephemeral disk will lose them).
-3. Run as a non-root user under a process manager (systemd/pm2), `npm ci --omit=dev && npm start`.
-4. Create the admin with `npm run create-admin`, then configure departments/categories.
-5. Run **one** instance (SQLite file + in-memory rate limiter). Scaling out needs Postgres and a shared limiter.
-
-There is no CI/Docker config in this repository yet.
+**Render** is the supported target: see **[DEPLOY.md](DEPLOY.md)** (a `render.yaml` blueprint creates the service, a
+1 GB persistent disk and all required settings). Generic requirements for any host: Node 22.13 or newer, HTTPS
+in front, one instance only, `DB`, `UPLOAD_DIR` (and optionally `BACKUP_DIR`) on a **persistent volume**,
+`NODE_ENV=production`, `TRUST_PROXY` = number of proxies in front, and `npm run create-admin` once.
+Serverless hosts (Vercel, Netlify) are not suitable because they have no persistent disk.
 
 ## Troubleshooting
 
-* `node:sqlite` missing / `ExperimentalWarning`: need Node ≥ 22.5 (the warning is harmless).
-* Everyone gets 429: behind a proxy, set `TRUST_PROXY=1`.
+* `node:sqlite` missing / `ExperimentalWarning`: need Node ≥ 22.13 (the warning is harmless).
+* Everyone gets 429: behind a proxy, set `TRUST_PROXY` to the number of proxies (usually `1`).
 * Officers see no reports: the report's category has no department, or the officer has none. Fix in
   Admin → Categories / Users.
 * Photos disappear after a redeploy: `UPLOAD_DIR` is not on persistent storage.

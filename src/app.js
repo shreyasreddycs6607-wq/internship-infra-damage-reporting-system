@@ -42,7 +42,10 @@ function createApp(opts = {}) {
 
   const app = express();
   app.disable('x-powered-by');
-  if (opts.trustProxy ?? Number(env.TRUST_PROXY || 0)) app.set('trust proxy', 1);
+  // TRUST_PROXY = number of reverse proxies in front of the app (Render: 1). Wrong values make every visitor look
+  // like the proxy's address, which would share one rate-limit bucket.
+  const proxyHops = Number(opts.trustProxy ?? env.TRUST_PROXY ?? 0);
+  if (proxyHops > 0) app.set('trust proxy', proxyHops);
 
   app.use((_req, res, next) => {
     res.set({
@@ -52,6 +55,8 @@ function createApp(opts = {}) {
     if (prod) res.set('Strict-Transport-Security', 'max-age=15552000');
     next();
   });
+  // Liveness/readiness probe for the hosting platform (no auth, touches the database, reveals nothing).
+  app.get('/healthz', (_req, res) => { db.prepare('SELECT 1').get(); res.json({ ok: true }); });
   // CSRF: SameSite=Strict cookie plus rejection of cross-origin state-changing requests. No CORS is enabled.
   app.use((req, res, next) => {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || !req.headers.origin) return next();
