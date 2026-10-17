@@ -1,5 +1,7 @@
 # Public Infrastructure Damage Reporting System
 
+**Live demo:** https://internship-infra-damage-reporting-system.onrender.com/  ·  **Status and requirement coverage:** [PROGRESS.md](PROGRESS.md)  ·  **Deployment guide:** [DEPLOY.md](DEPLOY.md)
+
 Two parts in one web app, as specified in the project description:
 
 1. **Infrastructure damage reporting** – citizens report potholes, streetlights, leaks, footpaths, drains…;
@@ -13,14 +15,14 @@ Two parts in one web app, as specified in the project description:
 One Node process serves the JSON API and the web app.
 
 * **Stack:** Node ≥ 22.13 (built-in `node:sqlite`), Express 4, Multer, Leaflet 1.9.4 (served locally). Plain
-  JavaScript, no build step. Runtime dependencies: `express`, `multer`, `leaflet`.
+  JavaScript, no build step. Runtime dependencies: `express`, `multer`, `nodemailer`, `leaflet`.
 * **Status of this build:** see [PROGRESS.md](PROGRESS.md) for what is done, verified, and still open.
 
 ## Run it
 
 ```bash
 npm install
-npm test                                  # 65 automated tests
+npm test                                  # 68 automated tests
 # one-time: create the first administrator (password is read from the environment, never hardcoded)
 ADMIN_EMAIL=you@city.gov ADMIN_NAME="Your Name" ADMIN_PASSWORD='choose-a-long-passphrase' npm run create-admin
 npm start                                 # http://localhost:3000

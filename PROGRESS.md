@@ -1,115 +1,81 @@
-# Progress
+# Project status
 
-_Last updated: 2026-10-16. Test status below was produced by actually running the commands._
+_Last updated: 2026-10-17. Every claim below was produced by running the code: `npm test` → **68 tests, 68 pass, 0 fail**;
+`npm audit` → 0 vulnerabilities. Live site: https://internship-infra-damage-reporting-system.onrender.com/_
 
-## Starting point
-A single 150-line `server.js` (Express + SQLite + Multer) with register/login, report create/list, an
-authority status/assignee patch, rating and KPIs, an **empty** `public/`, no tests, a hardcoded fallback token
-secret and a seeded `admin@city.gov / admin123` login. No frontend, no `.env`/`.gitignore`/README.
-The original `server.js` was replaced (the folder was not under git, so there is no copy; its behaviour is
-covered by `src/`). The old `/api/issues…` and `/api/kpis` endpoints were replaced by `/api/reports…`,
-`/api/dashboard`, `/api/admin/analytics`; nothing in the repo consumed them.
+## Coverage of the project description
 
-## Done and verified
-
-| Area | Evidence |
+### Infrastructure damage reporting
+| Requirement | Status |
 |---|---|
-| Stabilisation: `engines`, `.gitignore`, `.env.example`, README, working `npm test` | `npm test` |
-| Migrations (versioned, data-preserving; legacy admin123 login disabled) | `tests/admin.test.js` legacy test |
-| Auth: scrypt, sessions (cookie, hashed server-side, revocable), rate limits, CSRF origin check, generic errors, password change | `tests/auth.test.js` |
-| Citizen reporting: validation, tracking number, location sources, photos by magic bytes, ownership | `tests/reports.test.js`, browser |
-| Workflow: transitions, required notes, stale-update 409, assignment history, priority, remarks (internal/public), resolution evidence, reopen, feedback | `tests/reports.test.js`, browser |
-| Authorisation: IDOR → 404, officer scope, lead vs officer, admin-only routes, self-lockout | `tests/reports.test.js`, `tests/admin.test.js` |
-| Admin: users/roles, departments, categories, audit log, CSV export (formula-safe), analytics with documented KPI definitions, empty-data case | `tests/admin.test.js` |
-| In-app notifications; failure never rolls back the update | `tests/reports.test.js` |
-| Frontend (citizen / officer / admin SPA, map, geolocation with denied-permission fallback, responsive, empty/loading/error states) | driven in the in-app browser |
+| Web-based damage reporting; categories (potholes, streetlights, leaks, footpaths, drains, other) | Done; categories are admin-editable |
+| Image upload with geo-location | Done. Location = device-reported coordinates, a map point, or a typed address, always labelled as such. It is **not** read from photo EXIF data. |
+| Issue status tracking by the citizen | Done: tracking number, status history, public updates, resolution photos |
+| Authority dashboard; authority receives and assigns tasks | Done: officer dashboard, filters/search/pagination, assignment and reassignment with history, internal remarks, priority, overdue |
+| KPIs: average resolution time, issues resolved, satisfaction, repeated-issue rate | Done on the admin and officer dashboards, from real data (definitions in `src/analytics.js`) |
+| Out of scope (native app, AI detection) | Not built, as specified |
 
-**Latest results:** `npm test` → 65 tests, 65 pass, 0 fail. `npm audit` → 0 vulnerabilities.
+### Women entrepreneurs, customers, admin
+| Requirement | Status |
+|---|---|
+| Registration and secure login | Done (entrepreneur or citizen/customer at sign-up) |
+| Create and manage a home-business profile; the four categories | Done (Tiffin / Home Food, Tailoring & Stitching, Beauty & Personal Care, Handicrafts & Handmade) |
+| Step-by-step setup guidance: pricing, licensing and compliance, cost estimation, profit planning | Done as admin-editable articles plus a cost and profit calculator. The licensing text is **general information, not legal advice**. |
+| Upload service details, images, pricing, availability | Done |
+| Receive and respond to inquiries; track service requests | Done: in-platform message thread and a request status workflow |
+| Marketing tips, learning resources, growth content | Done (admin-managed) |
+| Customers browse **verified** businesses; search and filter by location, category, availability; detailed profiles | Done (only admin-approved profiles are public, with a Verified badge; "near me" distance search; ratings) |
+| Customers send inquiries or requests and contact providers through the platform | Done |
+| Admin: approve entrepreneur profiles; manage categories and listings; monitor activity; handle complaints; manage guidance content | Done (approve/reject/suspend with a reason; platform activity counts; complaints queue; content editor) |
 
-### Password reset and email verification (added on request)
-Done: one-time hashed tokens, verification link (24 h), reset link (1 h, single use, voids older links, signs out
-all sessions), identical "forgot" reply for known/unknown addresses, gating of reporting/inquiries/complaints/
-business profiles for unverified accounts **only when email is configured**, alert emails only to verified
-addresses, rate limits, honest 503/409 replies when email is off, startup refusal when SMTP is set without
-`APP_URL`. 12 tests in `tests/account.test.js`; browser-verified against a local SMTP catcher (real messages,
-real links). Not verified against a real mail provider. Existing self-registered users become "unverified"
-(staff are marked verified by the migration); if you switch email on later they will see the banner.
-Known gaps: registration still discloses taken addresses; the account email address cannot be changed yet
-(so there is no re-verification flow); verification and reset emails are plain text.
+### Non-functional requirements
+| Requirement | Status |
+|---|---|
+| Usability, responsiveness | Plain, labelled forms; keyboard focus and skip link; checked at phone width. **Not** tested with real users and no screen-reader audit was run. |
+| Performance (actions in under 2 s) | Pagination, indexes and capped payloads are in place. **Not measured**: no load test was run. |
+| Scalability | **Limited by design**: SQLite and an in-memory rate limiter mean one server instance. Moving to PostgreSQL would be the next step. |
+| Security | Done: hashed passwords, revocable sessions, rate limits, CSRF defence, role checks on the server, upload validation, audit log, verified email, password reset |
+| Availability, reliability | Hosted on Render with a persistent disk, health check, graceful shutdown, daily database snapshot. Uptime depends on the hosting plan; it is a single instance, so deploys cause a brief interruption. |
+| Maintainability | Modular code, migrations, 68 automated tests, documented setup |
+| Data privacy | Privacy notice page, minimal data, no tracking cookies, email/SMS opt-in. **Gaps**: permanent account deletion is not self-service, and photos keep their embedded EXIF data. |
 
-### Email/SMS alerts, business ratings, radius search (added on request, before deployment)
-Done: SMTP email and Twilio SMS channels (off unless configured, per-user opt-in/out, background sending,
-recorded outcomes, admin delivery log); one rating per completed request with averages, sorting and admin
-removal; business location stored to ~110 m with "near me" search (bounding box + exact distance), distance
-shown, sorting. Verified by 11 tests (`tests/extras.test.js`) including a real SMTP exchange with a local
-server, and in the browser (account preferences, saving a location, denied/granted device location, far-away
-search returning nothing, rating a completed request, reviews on the public page, delivery log).
-Not verified: delivery through a real SMTP provider or real Twilio account (no credentials available);
-SMS cost and number-verification rules of your provider apply.
-Payments were not added: the project description says customers use the platform for discovery and inquiry,
-not instant payment, in the first version.
+### Differences from the suggested stack
+| Suggested | Built | Why |
+|---|---|---|
+| React / Next.js, Tailwind or Bootstrap | Plain HTML, CSS and JavaScript (single-page app) | No build step, small, and enough for this scope |
+| Node.js + Express, REST | Same | |
+| MongoDB or PostgreSQL | SQLite (Node's built-in `node:sqlite`) | Simplest reliable option for one server; limits scale |
+| AWS, Vercel or Netlify | Render | Needs a persistent disk, which Vercel and Netlify do not offer |
 
-### Marketplace (women entrepreneurs / customers) – added after the project description was re-confirmed
-Done and verified (13 API tests in `tests/business.test.js` + browser run): registration as entrepreneur or
-customer; business profile with the four required categories; services/prices/availability; photos (validated by
-content, max 6); admin approve/reject/suspend with reasons and notifications; public browse/search/filter by
-location, category, availability; inquiries and service requests with message thread and status workflow;
-complaints handled by admin; admin-editable guidance (setup steps, pricing strategies, licensing/compliance,
-cost estimation, marketing tips, learning); cost and profit calculator (browser-side, break-even, suggested
-price); platform activity statistics; audit log entries. Phone-width layout checked on the new pages.
-Browser run: entrepreneur registered, built a profile with a service and photo, admin approved it, anonymous
-visitor searched and opened it, customer sent a service request, owner replied and accepted, customer filed a
-complaint, admin resolved it.
+## What was verified, and how
+* **Automated (68 tests):** authentication, role and ownership checks, report workflow and invalid transitions, uploads,
+  geolocation validation, analytics, legacy-data migration, business profiles and review, search and near-me, inquiries,
+  ratings, complaints, content, email/SMS delivery and failure handling, verification and reset, backups, health check,
+  rate limiting behind a proxy.
+* **Real SMTP exchange:** the email code was run against a local SMTP server (registration, verification link,
+  password reset). It has **not** been tried with a real mail provider or a real Twilio account.
+* **In a browser, end to end:** citizen reports with a map point and photo; admin accepts and assigns; officer progresses
+  and resolves with evidence; citizen sees only public updates; entrepreneur builds a profile and the admin approves
+  it; a visitor searches and a customer sends a request; owner replies; rating and complaint flows; verification and
+  reset with real emailed links; privacy page.
+* **Deployment:** the exact install and start steps were run from a fresh clone with production settings; the live
+  site answers its health check, sends security headers, and does not expose the database or source files.
+  Not confirmed from outside: that the persistent disk keeps data across a redeploy (steps in `DEPLOY.md`).
 
-Marketplace limitations: guidance text is general (India-flavoured examples) and **not legal advice**, admins
-should localise it; no payments (out of scope per the description); inquiry contact is in-platform messaging only
-; one business per entrepreneur; reviews can only be removed by an admin (no replies or edits); the radius
-search ignores longitude wrap at the antimeridian and caps candidates at 2000; the calculator ignores tax.
+## Known limitations
+* Registration reveals whether an email is already registered; accounts cannot change their email address.
+* Photos are not resized and keep EXIF metadata; there is no antivirus scan or orphan-file cleanup job.
+* Repeated-report detection uses a ~110 m grid; neighbours across a cell edge are missed.
+* Reports are routed to a department when filed; changing a category's department later does not re-route
+  existing reports (an admin assignment does).
+* Radius search ignores longitude wrap at the antimeridian and considers at most 2,000 businesses.
+* Reviews can only be removed by an admin (no replies or edits). One business per entrepreneur. No payments (out of
+  scope in the description).
+* There is no end-to-end browser test suite; visuals were checked mainly through the page structure.
+* Deploys briefly interrupt service (one instance, one disk). No CI pipeline or Dockerfile.
 
-**Browser run (real server, scratch DB, in-app browser):** registered a citizen through the form; filed a report
-(map click, geolocation permission denied → fallback message shown, photo upload) and got a tracking number;
-admin accepted and assigned it; the officer progressed it, added public and internal remarks, changed priority,
-uploaded a resolution photo and resolved it (missing-note error displayed); the citizen saw the public history
-and resolution without internal notes or staff names, and submitted feedback. Admin dashboard, map (marker),
-audit log, overdue filter and CSP (no violations) checked. 375 px layout: no page-level horizontal overflow.
-
-## Journeys
-* **A (citizen)** – verified (test + browser).
-* **B (authority)** – verified (test + browser).
-* **C (admin)** – verified by test; UI for departments/categories/users/dashboard/audit/map exercised in browser.
-  Not exercised in the browser: user deactivation/password-reset buttons, category SLA edits, CSV download click.
-* **D (security)** – verified by test.
-
-## Not done / limitations
-* **Email/SMS** need your own provider credentials (see README); unverified against real providers.
-* **Password recovery / email verification:** built (needs email configured). Without email an admin sets a
-  temporary password in Admin → Users.
-* **Map tiles:** OpenStreetMap blocked requests when the app sent no `Referer` (fixed by `Referrer-Policy:
-  strict-origin-when-cross-origin`). For production traffic use your own/commercial tile source.
-* **Application configuration UI / notification settings:** not built; configuration is environment-based.
-  Per-category target hours are editable.
-* **Registration reveals whether an email exists** (409). Needs email verification to avoid.
-* **Rate limiting is per-process memory.** Single-instance only.
-* **Location is never "verified".** Device-supplied coordinates are labelled as such and unverified.
-* **Repeated-report detection** uses a ~110 m grid; neighbours across a cell edge are missed.
-* **Report routing** happens at creation from the category's department; changing a category's department
-  later does not re-route existing reports (an admin assignment does).
-* **Photos:** no thumbnails/resizing, no EXIF stripping (photos may contain location metadata), no
-  antivirus scan, no cleanup job for files whose DB row was removed. Files are written only after validation and
-  removed if the DB insert fails.
-* **Performance targets are not measured.** Pagination, indexes and capped payloads are in place; no load test
-  was run. Procedure: seed 100k reports, run `autocannon` against `GET /api/reports?page=…` and
-  `/api/dashboard` with an admin cookie, and check p95 latency.
-* **No end-to-end test suite** (only API tests plus manual browser verification); screenshots could not be
-  captured in this environment, so visual polish and image rendering were checked via DOM only.
-* **Accessibility** basics (labels, focus, landmarks, skip link, live regions, contrast via system colours) are
-  implemented but no screen-reader or automated audit was run.
-* **Operational:** no Dockerfile/CI; no log shipping (errors go to stderr).
-* Wide admin tables scroll horizontally inside their container on phones.
-
-## Next steps (suggested order)
-1. Email provider behind `src/notify.js` + password reset + email verification.
-2. Strip EXIF / resize images; orphan-file cleanup job.
-3. Playwright E2E for journeys A–D and an axe accessibility pass.
-4. CI (tests + audit), Dockerfile, backup cron.
-5. Load test and, if needed, move to Postgres + shared rate limiter.
+## Suggested next steps
+1. Playwright end-to-end tests for the main journeys and an automated accessibility check.
+2. Move to PostgreSQL and shared rate limiting if more than one instance is needed.
+3. Image resizing and EXIF stripping; account deletion; changing the email address.
+4. Off-site backups and a CI pipeline.

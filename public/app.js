@@ -99,6 +99,7 @@ function authView(mode) {
     reg && field('name', 'Full name', name),
     field('email', 'Email', email),
     field('pw', 'Password', pw, reg ? 'At least 8 characters.' : null),
+    reg && h('p', { class: 'hint' }, 'By creating an account you accept the ', h('a', { href: '#/privacy' }, 'privacy notice'), '.'),
     err, btn,
     h('p', {}, reg ? 'Already registered? ' : 'New here? ', h('a', { href: reg ? '#/login' : '#/register' }, reg ? 'Sign in' : 'Create an account')),
     !reg && h('p', {}, meta.channels.email ? h('a', { href: '#/forgot' }, 'Forgot your password?') : 'Forgot your password? Ask an administrator to reset it for you.'));
@@ -911,6 +912,31 @@ async function contentView() {
         h('button', { class: 'btn danger', onclick: async () => { if (confirm(`Delete "${c.title}"?`)) { await api('DELETE', `/api/admin/content/${c.id}`); contentView(); } } }, 'Delete')))), 'No content yet.'));
 }
 
+// ---------- privacy notice ----------
+function privacyView() {
+  const sec = (title, ...items) => h('div', { class: 'card' }, h('h2', {}, title), h('ul', {}, items.map((t) => h('li', {}, t))));
+  app.replaceChildren(h('h1', {}, 'Privacy notice'),
+    h('p', { class: 'hint' }, 'This is a demonstration project. This notice describes what the application actually does; an organisation running it for real use should review and adapt it with its own legal advice.'),
+    sec('What we store',
+      'Account: your name, email address and password (stored only as a salted hash). A mobile number only if you add one.',
+      'Infrastructure reports: category, title, description, photos, the location you give (device-reported coordinates, a map point or a typed address, labelled as such), and the status history.',
+      'Business profiles: business name, description, city, an approximate location (rounded to about 100 m), services, prices, photos, and a phone number only if you enter one, which is then shown publicly.',
+      'Messages between customers and businesses, complaints, ratings and reviews, and notifications about your activity.',
+      'A sign-in cookie that keeps you logged in. It is strictly necessary, and there are no advertising or analytics cookies.'),
+    sec('Who can see it',
+      'Your infrastructure reports: you, the officers of the responsible department, and administrators. Internal staff notes are never shown to you or the public.',
+      'Approved business profiles, their photos and reviews: anyone. Reviewers appear as first name and last initial.',
+      'Inquiries and messages: only the customer and the business owner. Complaints: administrators.',
+      'Email or text notifications are sent only if the service has those channels enabled and you have not turned them off. Texts also need a mobile number you added.'),
+    sec('Photos',
+      'Photos may contain hidden location data added by your phone (EXIF). This version does not remove it. Turn off location tagging in your camera settings if you do not want it shared.'),
+    sec('Keeping and deleting data',
+      'Data is kept while the service runs. An administrator can deactivate your account at any time. Permanent deletion of an account and its reports is not available in this version: contact the service administrator to ask what can be done.'),
+    sec('Security',
+      'Passwords are hashed, sessions can be revoked, sign-in and reset requests are rate limited, uploads are checked, and administrators’ actions are logged.'),
+    h('p', {}, h('a', { href: '#/' }, '← Back')));
+}
+
 // ---------- forgot / reset password, verify email ----------
 function forgotView() {
   const err = h('p', { class: 'err', role: 'alert' }), email = h('input', { id: 'fe', type: 'email', required: true, autocomplete: 'email' });
@@ -967,12 +993,13 @@ async function routeInner() {
   const [path, query] = hash.slice(1).split('?');
   const parts = path.split('/').filter(Boolean);
   renderNav();
-  const publicPage = ['businesses', 'forgot', 'reset', 'verify'].includes(parts[0]);
+  const publicPage = ['businesses', 'forgot', 'reset', 'verify', 'privacy'].includes(parts[0]);
   if (!me && !publicPage) return authView(parts[0] === 'register' ? 'register' : 'login');
   if (me && ['login', 'register'].includes(parts[0])) return go('#/');
   const params = Object.fromEntries(new URLSearchParams(query || ''));
   try {
     if (parts[0] === 'businesses') return parts[1] ? await businessDetailView(parts[1]) : await businessesView();
+    if (parts[0] === 'privacy') return privacyView();
     if (parts[0] === 'forgot') return forgotView();
     if (parts[0] === 'reset') return resetView(params.token);
     if (parts[0] === 'verify') return await verifyView(params.token);
